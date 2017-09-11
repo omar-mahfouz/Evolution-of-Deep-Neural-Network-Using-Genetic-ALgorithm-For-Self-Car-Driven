@@ -1,0 +1,20 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 2017
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NN and Ga Cars Drive", "NN and Ga Cars Drive.csproj", "{CDDC3831-A299-5D5A-484D-B40AF34DBF70}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{CDDC3831-A299-5D5A-484D-B40AF34DBF70}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CDDC3831-A299-5D5A-484D-B40AF34DBF70}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CDDC3831-A299-5D5A-484D-B40AF34DBF70}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CDDC3831-A299-5D5A-484D-B40AF34DBF70}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
