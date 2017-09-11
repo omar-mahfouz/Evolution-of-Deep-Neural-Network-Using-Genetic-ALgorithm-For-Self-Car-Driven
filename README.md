@@ -2,7 +2,7 @@
 
 A 3d Unity simulation for self car driven by Evolution Deep Neural Network Using Genetic Algorithm to train the neural network weights
 
-You Can See The Implementation Video on YouTube :
+You Can See The Implementation Video on YouTube : https://www.youtube.com/watch?v=QFjvmOMMdbs&feature=youtu.be
 
 
 # The Car :
