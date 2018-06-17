@@ -1,8 +1,7 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.UI;
-using UnityEngine.SceneManagement;
+
+
 public class InformationDisplay : MonoBehaviour
 {
 
@@ -14,40 +13,31 @@ public class InformationDisplay : MonoBehaviour
 
     public Text CarStayAliveText;
 
-    private GeneticManager Genetic_Manager;
-    private GameManager Game_Manager;
-
-    
-
-	void Start ()
+    private void Start()
     {
-        Genetic_Manager = GameObject.FindGameObjectWithTag("GameManager").GetComponent<GeneticManager>();
-        Game_Manager = GameObject.FindGameObjectWithTag("GameManager").GetComponent<GameManager>();
-    }
-	
-	
-	void Update ()
-    {
-        GenerationNumberText.text = Genetic_Manager.GenerationNumber.ToString();
-
-        BestFitnessText.text = Game_Manager.BestFitness.ToString();
-
-        CarStayAliveText.text = Game_Manager.CarStayAlive.ToString();
-
+        EventsManager.singleton.OnTestSucces += OnTestSucces;
     }
 
-    public void ShowSuccessPanel()
+    private void OnTestSucces()
+    {
+        ShowSuccessPanel();
+    }
+
+    private void ShowSuccessPanel()
     {
         SuccessPanel.SetActive(true);
 
-        SuccessPanel.GetComponent<SuccessPanel>().SetInformation(Genetic_Manager.GenerationNumber, Genetic_Manager.MutationRate, Genetic_Manager.CrossOverWeightRate);
+        SuccessPanel.GetComponent<SuccessPanel>().SetInformation(
+            GeneticManager.singleton.GenerationNumber
+            , GeneticManager.singleton.mutationRate
+            , GeneticManager.singleton.crossOverWeightRate);
     }
 
-
-
-   
-
-
-
+    private void Update()
+    {
+        GenerationNumberText.text = GeneticManager.singleton.GenerationNumber.ToString();
+        BestFitnessText.text = GameManager.singleton.bestFitness.ToString();
+        CarStayAliveText.text = GameManager.singleton.carStayAlive.ToString();
+    }
 
 }

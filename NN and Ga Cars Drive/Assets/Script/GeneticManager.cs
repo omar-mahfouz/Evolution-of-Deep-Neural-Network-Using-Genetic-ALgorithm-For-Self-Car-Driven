@@ -1,284 +1,227 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
+﻿using UnityEngine;
 
 public class GeneticManager : MonoBehaviour
 {
-    public GameObject CarPrefab;
+    public GameObject carPrefab;
+    public int populationSize = 30;
+    public int[] neuralNetworkShape;
+    public double mutationRate = 0.2;
+    public double crossOverWeightRate = 0.6;
+    public int numberOfBestAgentFitness = 6;
+    public int numberOfAgentToCrossOver = 4;
+    public int GenerationNumber = 1;
 
-    public Agent[] Populition;
+    private Agent[] population;
+    private int weightNum;
+    private int biasesNum;
 
-    public int PopulitionSize = 40;
+    public static GeneticManager singleton;
 
-    //The Number Of The Best Agent Will Keep it To The Next generation 
-    public int NumberOfBestAgentFitness = 6; 
-
-    //The Number Of The Best Agent Will Keep it To Cross Over It
-    public int NumberOfAgentToCrossOver = 4; 
-
-    //The Size And Number Of Layers In Neural Network 
-    public int[] NeuralNetworkShape;
-
-
-    //The Percent Value of Weight Mutated
-    public double MutationRate = 0.05;
-    //The Percent Value of Weight Cross Over
-    public double CrossOverWeightRate = 0.3;
-         
-
-    //The Generation Number We Reach It
-    public  int GenerationNumber = 1;
-
-    //The Weights Number In All Neural Network Layers
-    private int WeightNum;
-    //The Biases Number In All Neural Network Layers
-    private int BiasesNum;
-
-
-    //References
-    private GameManager Game_Manager;
-
+    private void Awake()
+    {
+        if (singleton == null)
+        {
+            singleton = this;
+        }
+        CalculateWeightAndBiasesNumber();
+    }
 
     private void Start()
     {
-        Game_Manager = GameObject.FindGameObjectWithTag("GameManager").GetComponent<GameManager>();
-
-        //Calculate Weights Number In Neural Network
-        for (int i = 1; i < NeuralNetworkShape.Length; i++)
-        {
-            WeightNum += NeuralNetworkShape[i - 1] * NeuralNetworkShape[i];
-        }
-
-        //Calculate Biases Number In Neural Network
-        BiasesNum = NeuralNetworkShape.Length - 1;
-   
-        //Instantiate Populition 
-        Populition = new Agent[PopulitionSize];
-
-        for (int i = 0; i < PopulitionSize; i++)
-        {
-            //Instantiate Agent Dna 
-            Populition[i] = new Agent();
-
-            Populition[i].Fitness = 0;
-            //Instantiate new Agent Weights
-            Populition[i].Weights = new double[WeightNum];
-            //Instantiate new Agent Biases
-            Populition[i].Biases = new double[BiasesNum];
-
-            //Random Weights Value
-            for (int j = 0; j < WeightNum; j++)
-            {
-                Populition[i].Weights[j] = Random.Range(-1.0f, 1.0f);
-            }
-
-            //Random Weights Value
-            for (int j = 0; j < BiasesNum; j++)
-            {
-                Populition[i].Biases[j] = Random.Range(-1.0f, 1.0f);
-            }
-
-        }
-
-
-        StartTheGenetationTest();
-
+        EventsManager.singleton.OnTestBegin += OnTestBegin;
     }
 
-    public void StartTheGenetationTest()
+    public void SetAgentFitnessValue(int id, double fitness)
     {
-        for (int i = 0; i < PopulitionSize; i++)
-        {
-            //Instantiate new Car Prefab
-            Populition[i].Prefab = Instantiate(CarPrefab, new Vector3(-4, 0.035f, 4.116f), new Quaternion(0, 0, 0, 0));
-            //Instantiate new Car Neural Network
-            Populition[i].Prefab.GetComponent<Car>().InstNeuralNetwork(NeuralNetworkShape, Populition[i].Weights,Populition[i].Biases);
-            //Assign Dna Id By Index of Populition array
-            Populition[i].Prefab.GetComponent<Car>().Id = i;
-
-        }
-
-
-        //Start The Test
-        Game_Manager.StartNewTest(PopulitionSize);
-
+        population[id].fitness = fitness;
     }
 
-
-    public void RePopulition()
+    private void CalculateWeightAndBiasesNumber()
     {
-
-
-        Debug.Log("Generation : " + GenerationNumber + "|" + "Test End Best Fitness :" + Game_Manager.BestFitness);
-
-
-
-        //Sort Populition By fitness Value
-        for (int i = 0; i < PopulitionSize; i++)
+        for (int i = 1; i < neuralNetworkShape.Length; i++)
         {
-            for (int j = i; j < PopulitionSize; j++)
+            weightNum += neuralNetworkShape[i - 1] * neuralNetworkShape[i];
+        }
+
+        biasesNum = neuralNetworkShape.Length - 1;
+    }
+
+    private void OnTestBegin()
+    {
+        if (population == null)
+        {
+            InstaPopulation();
+        }
+        else
+        {
+            RePopulition();
+        }
+    }
+
+    private void InstaPopulation()
+    {
+        population = new Agent[populationSize];
+        FillPopulationByRandomValues(population, 0);
+
+        BuildCars();
+    }
+
+    private void BuildCars()
+    {
+        for (int i = 0; i < populationSize; i++)
+        {
+            population[i].car = Instantiate(carPrefab, new Vector3(-4, 0.035f, 4.116f), new Quaternion(0, 0, 0, 0));
+            population[i].car.GetComponent<Car>().InstNeuralNetwork(neuralNetworkShape, population[i].weights, population[i].biases);
+            population[i].car.GetComponent<Car>().id = i;
+        }
+    }
+
+    private int newPopulitionIndex = 0;
+
+    private void RePopulition()
+    {
+        GenerationNumber++;
+
+        newPopulitionIndex = 0;
+
+        SortPopulation();
+        Agent[] newPopulation = PickBestPopulation();
+        CrossOver(newPopulation);
+        Mutate(newPopulation);
+        FillPopulationByRandomValues(newPopulation, newPopulitionIndex);
+
+        population = newPopulation;
+        BuildCars();
+    }
+
+    private void SortPopulation()
+    {
+        for (int i = 0; i < populationSize; i++)
+        {
+            for (int j = i; j < populationSize; j++)
             {
-                if (Populition[i].Fitness < Populition[j].Fitness)
+                if (population[i].fitness < population[j].fitness)
                 {
-                    Agent Temp = Populition[i];
-                    Populition[i] = Populition[j];
-                    Populition[j] = Temp;
+                    Agent Temp = population[i];
+                    population[i] = population[j];
+                    population[j] = Temp;
                 }
             }
         }
+    }
 
+    private Agent[] PickBestPopulation()
+    {
+        Agent[] newPopulation = new Agent[populationSize];
 
-        int IndexforNewPopulition = 0;
-
-        Agent[] NewPopulition = new Agent[PopulitionSize];
-
-        //Pick The Best 25% from Populition And Stay it 
-        for (int i = 0; i < NumberOfBestAgentFitness; i++)
+        for (int i = 0; i < numberOfBestAgentFitness; i++)
         {
-
-            NewPopulition[IndexforNewPopulition] = Populition[i];
-
-            NewPopulition[IndexforNewPopulition].Fitness = 0;
-
-            IndexforNewPopulition++;
-
+            newPopulation[newPopulitionIndex] = population[i];
+            newPopulation[newPopulitionIndex].fitness = 0;
+            newPopulitionIndex++;
         }
 
-      
-        //Cross Over :
-        for (int i = 0; i < NumberOfAgentToCrossOver; i+=2)
+        return newPopulation;
+    }
+
+    private void CrossOver(Agent[] newPopulation)
+    {
+        for (int i = 0; i < numberOfAgentToCrossOver; i += 2)
         {
             Agent Child1 = new Agent();
             Agent Child2 = new Agent();
 
-            Child1.Weights = new double[WeightNum];
-            Child2.Weights = new double[WeightNum];
+            Child1.weights = new double[weightNum];
+            Child2.weights = new double[weightNum];
 
-            Child1.Biases = new double[BiasesNum];
-            Child2.Biases = new double[BiasesNum];
+            Child1.biases = new double[biasesNum];
+            Child2.biases = new double[biasesNum];
 
-            Child1.Fitness = 0;
-            Child2.Fitness = 0;
+            Child1.fitness = 0;
+            Child2.fitness = 0;
 
-            for (int j=0;j<WeightNum;j++)
+            for (int j = 0; j < weightNum; j++)
             {
-                if(Random.Range(0.0f,1.0f)<CrossOverWeightRate)
+                if (Random.Range(0.0f, 1.0f) < crossOverWeightRate)
                 {
-                    Child1.Weights[j] = Populition[i].Weights[j];
-                    Child2.Weights[j] = Populition[i + 1].Weights[j];
+                    Child1.weights[j] = population[i].weights[j];
+                    Child2.weights[j] = population[i + 1].weights[j];
                 }
                 else
                 {
-                    Child1.Weights[j] = Populition[i + 1].Weights[j];
-                    Child2.Weights[j] = Populition[i ].Weights[j];
+                    Child1.weights[j] = population[i + 1].weights[j];
+                    Child2.weights[j] = population[i].weights[j];
                 }
             }
 
-            for (int j = 0; j < BiasesNum; j++)
+            for (int j = 0; j < biasesNum; j++)
             {
-                if (Random.Range(0.0f, 1.0f) < CrossOverWeightRate)
+                if (Random.Range(0.0f, 1.0f) < crossOverWeightRate)
                 {
-                    Child1.Biases[j] = Populition[i].Biases[j];
-                    Child2.Biases[j] = Populition[i + 1].Biases[j];
+                    Child1.biases[j] = population[i].biases[j];
+                    Child2.biases[j] = population[i + 1].biases[j];
                 }
                 else
                 {
-                    Child1.Biases[j] = Populition[i + 1].Biases[j];
-                    Child2.Biases[j] = Populition[i].Biases[j];
+                    Child1.biases[j] = population[i + 1].biases[j];
+                    Child2.biases[j] = population[i].biases[j];
                 }
             }
-
-
-            NewPopulition[IndexforNewPopulition] = Child1;
-
-            IndexforNewPopulition++;
-
-            NewPopulition[IndexforNewPopulition] = Child2;
-
-            IndexforNewPopulition++;
-
+            newPopulation[newPopulitionIndex] = Child1;
+            newPopulitionIndex++;
+            newPopulation[newPopulitionIndex] = Child2;
+            newPopulitionIndex++;
         }
+    }
 
-
-      
-
-
-        //Make mutated      
-        for (int i=0;i<IndexforNewPopulition;i++)
+    private void Mutate(Agent[] newPopulation)
+    {
+        for (int i = 0; i < newPopulitionIndex; i++)
         {
-            if (Random.Range(0.0f, 1.0f) < MutationRate)
+            if (Random.Range(0.0f, 1.0f) < mutationRate)
             {
-            
-
-                for(int j=0;j<WeightNum;j++)
+                for (int j = 0; j < weightNum; j++)
                 {
-
-                    if(Random.Range(0.0f, 1.0f) < MutationRate)
+                    if (Random.Range(0.0f, 1.0f) < mutationRate)
                     {
-                        NewPopulition[i].Weights[j] = Random.Range(-1.0f, 1.0f);
+                        newPopulation[i].weights[j] = Random.Range(-1.0f, 1.0f);
                     }
-                    
                 }
-
-
-                for (int j = 0; j < BiasesNum; j++)
+                for (int j = 0; j < biasesNum; j++)
                 {
-
-                    if (Random.Range(0.0f, 1.0f) < MutationRate )
+                    if (Random.Range(0.0f, 1.0f) < mutationRate)
                     {
-                        NewPopulition[i].Biases[j] = Random.Range(-1.0f, 1.0f);
+                        newPopulation[i].biases[j] = Random.Range(-1.0f, 1.0f);
                     }
-
                 }
-
-
-            
-
-          
-
-
             }
-
         }
+    }
 
-
-        //Make The Rest New Agent
-        while (IndexforNewPopulition<PopulitionSize)
+    private void FillPopulationByRandomValues(Agent[] newPopulation, int startIndex)
+    {
+        while (startIndex < populationSize)
         {
-            NewPopulition[IndexforNewPopulition] = new Agent();
+            newPopulation[startIndex] = new Agent();
 
-            NewPopulition[IndexforNewPopulition].Fitness = 0;
+            newPopulation[startIndex].fitness = 0;
             //Instantiate new Dna Weights
-            NewPopulition[IndexforNewPopulition].Weights = new double[WeightNum];
+            newPopulation[startIndex].weights = new double[weightNum];
             //Instantiate new Agent Biases
-            NewPopulition[IndexforNewPopulition].Biases = new double[BiasesNum];
+            newPopulation[startIndex].biases = new double[biasesNum];
             //Random Weights Value
-            for (int j = 0; j < WeightNum; j++)
+            for (int j = 0; j < weightNum; j++)
             {
-                NewPopulition[IndexforNewPopulition].Weights[j] = Random.Range(-1.0f, 1.0f);
+                newPopulation[startIndex].weights[j] = Random.Range(-1.0f, 1.0f);
             }
-            
+
             //Random Biases Value
-            for (int j = 0; j < BiasesNum; j++)
+            for (int j = 0; j < biasesNum; j++)
             {
-                NewPopulition[IndexforNewPopulition].Biases[j] = Random.Range(-1.0f, 1.0f);
+                newPopulation[startIndex].biases[j] = Random.Range(-1.0f, 1.0f);
             }
 
-            IndexforNewPopulition++;
+            startIndex++;
         }
-    
-
-
-        //Assign New Populition 
-        Populition = NewPopulition;
-
-        //Start New Generation Test 
-        StartTheGenetationTest();
-
-        //Increase Generation Number
-        GenerationNumber++;
-
-
-
     }
 }

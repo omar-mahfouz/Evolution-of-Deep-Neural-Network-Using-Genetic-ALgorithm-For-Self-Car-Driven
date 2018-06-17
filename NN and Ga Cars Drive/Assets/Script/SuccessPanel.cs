@@ -1,28 +1,19 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.SceneManagement;
 
 public class SuccessPanel : MonoBehaviour {
 
-    public Text GenerationNumberText;
+    public Text generationNumberText;
+    public Text mutationRateText;
+    public Text crossOverRateText;
 
-    public Text MutationRateText;
-
-    public Text CrossOverRateText;
-
-    public void SetInformation(int GenerationNumber, double MutationRate, double CrossOverRate)
+    public void SetInformation(int generationNumber, double mutationRate, double crossOverRate)
     {
-
-        GenerationNumberText.text = GenerationNumber.ToString();
-
-        MutationRateText.text = MutationRate.ToString();
-
-        CrossOverRateText.text = CrossOverRate.ToString();
-
+        generationNumberText.text = generationNumber.ToString();
+        mutationRateText.text = mutationRate.ToString();
+        crossOverRateText.text = crossOverRate.ToString();
     }
-
 
     public void RestartTest()
     {

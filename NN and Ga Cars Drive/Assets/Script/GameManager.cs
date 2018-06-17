@@ -1,134 +1,77 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
+﻿using UnityEngine;
 
 public class GameManager : MonoBehaviour
 {
-    //Number Of Car Stay not Crashed in Single Generation Test
-    public int CarStayAlive;
+    public int carStayAlive;
+    public double bestFitness = 0;
+    public TrackManager trackManager;
 
-    //Check Points Position
-    public Transform[] CheckPoints;
 
-    //If The Geneartion Test Is End And All Car Is Crashed
-    bool EndTheGenerationTest = true;
+    public static GameManager singleton;
 
-    //The Best Fitness Value The Cars Reached
-    public double BestFitness = 0;
-
-    //The Start Point For Instantiate Cars
-    public Transform StartPosition;
-
-    //References
-    private GeneticManager Genetic_Manager;
-    private CameraFollow MainCamera;
-    private InformationDisplay display;
-
-    //To Store The Length Of All Track
-    private double TrackLenght;
-
+    private void Awake()
+    {
+        if (singleton == null)
+        {
+            singleton = this;
+        }
+    }
 
     private void Start()
     {
+        EventsManager.singleton.OnCarCrashed += OnCarCrashed;
+        EventsManager.singleton.OnCarReachCheckPoint += OnCarReachCheckPoint;
+        EventsManager.singleton.OnTestBegin += OnTestBegin;
+        EventsManager.singleton.OnTestEnd += OnTestEnd;
+        EventsManager.singleton.OnTestSucces += OnTestSucces;
 
-        Genetic_Manager = GetComponent<GeneticManager>();
-        MainCamera = Camera.main.GetComponent<CameraFollow>();
-        display = GameObject.FindGameObjectWithTag("Display").GetComponent<InformationDisplay>();
-
-        //Calculate Track Length
-        TrackLenght = CalculateTrackLength();
-
-
+        Invoke("StartNewTest", 1f);
     }
 
-
-    double CalculateTrackLength()
+    private void OnCarCrashed(Car car)
     {
+        carStayAlive--;
+        double fitness = trackManager.CalculateCarTrackProgress(transform.position
+            , car.lastCheckPointNumber);
 
-        //Calculate The Distance Between Start Point And Each CheckPoint And Finish Line
+        GeneticManager.singleton.SetAgentFitnessValue(car.id, fitness);
 
-        double tracklenght = Vector3.Distance(CheckPoints[0].position, StartPosition.position);
-
-        for (int i = 0; i < CheckPoints.Length - 1; i++)
+        if (bestFitness < fitness)
         {
-            tracklenght += Vector3.Distance(CheckPoints[i].position, CheckPoints[i + 1].position);
+            bestFitness = fitness;
         }
 
-        return tracklenght;
-
+        if (carStayAlive <= 0)
+        {
+            EventsManager.singleton.CallOnTestEnd();
+        }
     }
 
-
-
-    //Start New Generation Test 
-    public void StartNewTest(int NumOfPopulition)
+    private void OnCarReachCheckPoint(int checkPointNumber, bool isFinishLine)
     {
-        //Assign Car Number 
-        CarStayAlive = NumOfPopulition;
-
-        //Make The Variable False To Begin Testing
-        EndTheGenerationTest = false;
-
-        //Reset Camera Position
-        MainCamera.ResetCameraPosition();
-
-
+        if (isFinishLine)
+        {
+            EventsManager.singleton.CallOnTestSucces();
+        }
     }
 
-	void Update () 
+    private void OnTestBegin()
     {
-
-        if(EndTheGenerationTest)
-        {
-            return;
-        }
-
-        //to Check If All Car Crashed to Stop The Test 
-        if (CarStayAlive<=0  && EndTheGenerationTest == false)
-        {
-            EndTheGenerationTest = true;
-            Genetic_Manager.RePopulition();
-        }
-		
-	}
-
-    public double CalculateFitness(Vector3 CarPosition,int IndexforLastChekPoint)
+        carStayAlive = GeneticManager.singleton.populationSize;
+    }
+    private void OnTestEnd()
     {
-       
-        if(IndexforLastChekPoint==CheckPoints.Length-1)
-        {
-            return 1;
-        }
-
-        //Calclute The Fitness Value By The Progress To Finish Line
-
-
-        double Fitness = Vector3.Distance(CheckPoints[IndexforLastChekPoint+1].position,CarPosition);
-
-        for (int i=IndexforLastChekPoint+1;i<CheckPoints.Length-1;i++)
-        {
-            Fitness += Vector3.Distance(CheckPoints[i].position, CheckPoints[i + 1].position);
-        }
-
-
-        Fitness = (1 - (Fitness / TrackLenght));
-
-
-        if (BestFitness<Fitness)
-        {
-            BestFitness = Fitness;
-        }    
-
-        return Fitness;
-
+        StartNewTest();
     }
 
-
-    public void TestFinish()
+    private void OnTestSucces()
     {
-        display.ShowSuccessPanel();
-
         Time.timeScale = 0;
+    }
+
+    private void StartNewTest()
+    {
+        EventsManager.singleton.CallOnTestBegin();
     }
 
 }
